@@ -1,6 +1,7 @@
 exports.ping = require('./ping');
 exports.switching = require('./switching');
 exports.waypoint = require('./waypoint');
+exports.soc = require('./soc');
 
 exports.isFromCrew = (msg, settings) => {
   const crew = settings.nodes
