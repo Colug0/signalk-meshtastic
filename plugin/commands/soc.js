@@ -4,7 +4,7 @@ module.exports = {
   accept: (msg) => (msg.data.toLowerCase() === 'report soc'),
 
   handle: (msg, settings, device, app) => {
-    const path = 'electrical.batteries.LiFePo4.capacity.stateOfCharge';
+    const path = 'electrical.batteries.house.capacity.stateOfCharge';
     const socValue = app.getSelfPath(path);
 
     if (socValue && socValue.value !== undefined) {

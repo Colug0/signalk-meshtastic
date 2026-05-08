@@ -1014,7 +1014,7 @@ module.exports = (app) => {
       properties: {
         device: {
           type: 'object',
-          title: 'Meshtastic device connection settings',
+          title: 'Meshtastic device connection settings:',
           properties: {
             transport: {
               type: 'string',
