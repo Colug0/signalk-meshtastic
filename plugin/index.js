@@ -262,6 +262,9 @@ module.exports = (app) => {
     }
 
     const nodeDbFile = join(app.getDataDirPath(), 'node-db.json');
+    const pluginStartTime = Date.now();
+    const gracePeriod = 30000; // 30 seconds
+    let lastMetaUpdateTime = 0;
 
     publishInterval = setInterval(() => {
       if (!device) {
@@ -321,6 +324,13 @@ module.exports = (app) => {
     function setConnectionStatus() {
       setWatchdog();
       const now = new Date();
+      const elapsedTime = Date.now() - pluginStartTime;
+      
+      // Update meta once after grace period ends to show actual warning
+      if (elapsedTime >= gracePeriod && Date.now() - lastMetaUpdateTime >= 10000) {
+        lastMetaUpdateTime = Date.now();
+        sendMeta();
+      }
       const nodesOnline = Object.keys(nodes)
         .filter((nodeId) => {
           if (nodes[nodeId].thisNode) {
@@ -410,6 +420,9 @@ module.exports = (app) => {
     }
 
     function sendMeta() {
+      const elapsedTime = Date.now() - pluginStartTime;
+      const showWarning = elapsedTime >= gracePeriod;
+      
       app.handleMessage('signalk-meshtastic', {
         updates: [
           {
@@ -477,12 +490,25 @@ module.exports = (app) => {
                 value: {
                   displayName: 'Device state number',
                   description: 'State of connection to the Meshtastic device as numeric value',
-                  zones: [
+                  zones: showWarning ? [
                     {
                       state: 'warn',
                       lower: 0,
                       upper: 5,
                       message: 'Not connected to Meshtastic device',
+                    },
+                    {
+                      state: 'nominal',
+                      lower: 7,
+                      upper: 8,
+                      message: 'Meshtastic connected and configured',
+                    },
+                  ] : [
+                    {
+                      state: 'nominal',
+                      lower: 0,
+                      upper: 6,
+                      message: 'Meshtastic device is initializing...',
                     },
                     {
                       state: 'nominal',
