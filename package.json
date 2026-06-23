@@ -1,9 +1,10 @@
 {
   "name": "@meri-imperiumi/signalk-meshtastic",
-  "version": "1.2.4",
+  "version": "1.4.0",
   "description": "Signal K plugin for interfacing with the Meshtastic LoRa mesh network",
   "scripts": {
-    "test": "eslint ."
+    "pretest": "eslint .",
+    "test": "node --test test/*.test.js"
   },
   "repository": {
     "type": "git",
@@ -16,11 +17,20 @@
   "keywords": [
     "meshtastic",
     "signalk-node-server-plugin",
-    "signalk-category-ais",
-    "signalk-category-hardware"
+    "signalk-category-hardware",
+    "signalk-category-notifications"
   ],
   "main": "plugin/index.js",
   "signalk-plugin-enabled-by-default": false,
+  "signalk": {
+    "appIcon": "./doc/mpwrd.png",
+    "displayName": "Meshtastic Integration",
+    "screenshots": [
+      "./doc/meshtastic-bequia.png",
+      "./doc/config-crew-role.png",
+      "./doc/telemetry.png"
+    ]
+  },
   "author": "Henri Bergius <henri.bergius@iki.fi>",
   "license": "GPLV3",
   "publishConfig": {
@@ -30,8 +40,7 @@
     "@bufbuild/protobuf": "^2.6.0",
     "@meshtastic/core": "^2.6.7",
     "@meshtastic/transport-http": "^0.2.5",
-    "@meshtastic/transport-node": "^0.0.2",
-    "@meshtastic/transport-node-serial": "^0.0.2"
+    "@meshtastic/transport-node": "^0.0.2"
   },
   "devDependencies": {
     "eslint": "^8.57.1",

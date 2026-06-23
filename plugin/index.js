@@ -3,7 +3,8 @@ const { join } = require('path');
 
 const Telemetry = require('./telemetry');
 const commands = require('./commands/index');
-const { vesselIcon } = require('./waypoint');
+const { sendMOB } = require('./waypoint');
+const { sendNotification } = require('./notifications');
 
 if (!global.crypto) {
   // Older Node.js versions (like the one bundled in Venus OS
@@ -16,10 +17,12 @@ if (!global.crypto) {
 let MeshDevice;
 let TransportHTTP;
 let TransportNode;
-let TransportNodeSerial;
 let create;
 let toBinary;
 let Protobuf;
+
+// Keep a map of ongoing notification episodes
+const episodes = new Map();
 
 function getNodeContext(app, node, nodeNum, settings) {
   if (node.thisNode) {
@@ -237,16 +240,14 @@ module.exports = (app) => {
     })
     .then((lib) => {
       TransportNode = lib.TransportNode;
-      return import('@meshtastic/transport-node-serial');
-    })
-    .then((lib) => {
-      TransportNodeSerial = lib.TransportNodeSerial;
       return import('@bufbuild/protobuf');
     })
     .then((lib) => {
       create = lib.create;
       toBinary = lib.toBinary;
-      app.setPluginStatus('Meshtastic library loaded');
+      if (app.setPluginStatus) {
+        app.setPluginStatus('Meshtastic library loaded');
+      }
     })
     .catch((e) => {
       app.setPluginError(`Failed to load Meshtastic library: ${e.message}`);
@@ -254,7 +255,12 @@ module.exports = (app) => {
 
   plugin.start = (settings, restart) => {
     if (!toBinary) {
-      app.setPluginStatus('Waiting for Meshtastic library to load');
+      if (app.setPluginStatus) {
+        app.setPluginStatus('Waiting for Meshtastic library to load');
+      }
+      if (!app.getDataDirPath) {
+        return;
+      }
       setTimeout(() => {
         plugin.start(settings, restart);
       }, 1);
@@ -533,7 +539,9 @@ module.exports = (app) => {
       });
     }
 
-    app.setPluginStatus('Loading Meshtastic node database');
+    if (app.setPluginStatus) {
+      app.setPluginStatus('Loading Meshtastic node database');
+    }
     readFile(nodeDbFile, 'utf-8')
       .catch(() => '{}')
       .then((nodeDb) => {
@@ -555,9 +563,6 @@ module.exports = (app) => {
         sendMeta();
         if (settings.device && settings.device.transport === 'http') {
           return TransportHTTP.create(settings.device.address);
-        }
-        if (settings.device && settings.device.transport === 'serial') {
-          return TransportNodeSerial.create(settings.device.address);
         }
         return TransportNode.create(settings.device.address);
       })
@@ -895,72 +900,10 @@ module.exports = (app) => {
                   return;
                 }
                 if (v.path.indexOf('notifications.') === 0) {
-                  if (!device) {
-                    // Not connected to Meshtastic yet
-                    return;
-                  }
-                  if (!settings.communications || !settings.communications.send_alerts) {
-                    return;
-                  }
-                  if (!v.value) {
-                    return;
-                  }
-                  if (!v.value.state || ['alarm', 'emergency'].indexOf(v.value.state) === -1) {
-                    return;
-                  }
-                  let bell = '';
-                  if (v.value.method && v.value.method.indexOf('sound') !== -1) {
-                    // Trigger audible bell on receiving Meshtastic devices
-                    bell = '\u0007 ';
-                  }
-                  const crew = settings.nodes.filter((node) => node.role === 'crew');
-                  if (!crew.length) {
-                    return;
-                  }
-                  // TODO: Send alert instead of text for higher priority?
-                  crew.reduce(
-                    (prev, member) => prev.then(() => device.sendText(`${bell}${v.value.message}`, member.node, true, false)),
-                    Promise.resolve(),
-                  )
-                    .catch((e) => app.error(`Failed to send alert: ${e.message}`));
+                  sendNotification(v.path, v.value, episodes, settings, device, app);
                   if (v.path.indexOf('notifications.mob.') === 0) {
                     // This is a notification about a MOB beacon, create waypoint
-                    let mobPosition;
-                    let mobVessel = {
-                      name: 'MOB beacon',
-                      mmsi: '9712234567',
-                    };
-                    if (v.value.data && v.value.data.mmsi) {
-                      mobVessel.mmsi = v.value.data.mmsi;
-                    }
-                    if (v.value.position) {
-                      // signalk-mob-notifier and freeboard-sk include position in the notification
-                      mobPosition = v.value.position;
-                    } else {
-                      // See if the MOB can be found from Signal K tree
-                      const mmsi = v.path.split('.').at(-1);
-                      mobVessel = app.signalk.root.vessels[`vessels.urn:mrn:imo:mmsi:${mmsi}`];
-                      if (mobVessel && mobVessel.navigation.position) {
-                        mobPosition = mobVessel.navigation.position;
-                        if (mobPosition.value) {
-                          mobPosition = mobPosition.value;
-                        }
-                      }
-                    }
-                    if (!mobPosition || !Number.isFinite(mobPosition.latitude)) {
-                      return;
-                    }
-                    const setWaypointMessage = create(Protobuf.Mesh.WaypointSchema, {
-                      id: mobVessel.mmsi,
-                      latitudeI: Math.floor(mobPosition.latitude / 1e-7),
-                      longitudeI: Math.floor(mobPosition.longitude / 1e-7),
-                      expire: Math.floor((new Date().getTime() / 1000) + (1 * 60 * 60)),
-                      name: mobVessel.name || `Beacon ${mobVessel.mmsi}`,
-                      description: `MOB beacon ${mobVessel.mmsi}`,
-                      icon: vesselIcon(mobVessel),
-                    });
-                    device.sendWaypoint(setWaypointMessage, 'broadcast', 0)
-                      .catch((e) => app.error(`Failed to send waypoint: ${e.message}`));
+                    sendMOB(v.path, v.value, app, device, create, Protobuf);
                   }
                   return;
                 }
@@ -1006,6 +949,7 @@ module.exports = (app) => {
     unsubscribes.signalk = [];
     unsubscribes.meshtastic.forEach((f) => f());
     unsubscribes.meshtastic = [];
+    episodes.clear();
 
     if (!device || device.deviceStatus === 2) {
       return;
@@ -1018,7 +962,7 @@ module.exports = (app) => {
   plugin.schema = () => {
     function nodeList() {
       if (Object.keys(nodes).length === 0) {
-        return undefined;
+        return [];
       }
       return Object.keys(nodes)
         .filter((nodeId) => {
@@ -1054,10 +998,6 @@ module.exports = (app) => {
                 {
                   const: 'http',
                   title: 'HTTP (nodes connected to same network, typically ESP32)',
-                },
-                {
-                  const: 'serial',
-                  title: 'Serial port (use full path to serial device as "address")',
                 },
               ],
             },

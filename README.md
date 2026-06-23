@@ -29,8 +29,9 @@ In production use on several boats.
 
 ## Features
 
-* Connect to a Meshtastic node via HTTP, TCP, or Serial
+* Connect to a Meshtastic node via HTTP or TCP
   * Keep a persistent database of all seen Meshtastic nodes
+  * Note: Serial transport support was removed in 1.3.0 to comply with [postinstall deprecation](https://demo.signalk.org/documentation/Developing/Plugins/Publishing_to_The_AppStore.html#important-avoid-install-time-scripts)
 * Update Meshtastic node position from Signal K GNSS position
 * Send Signal K alerts as Meshtastic text messages to crew
   * MOB alerts (for example from [signalk-mob-notifier](https://github.com/meri-imperiumi/signalk-mob-notifier)) also send a waypoint to the MOB beacon
@@ -50,8 +51,7 @@ In production use on several boats.
 ## Requirements
 
 * This plugin running inside your Signal K installation
-* One [Meshtastic device](https://meshtastic.org/docs/hardware/devices/) running and connected to the same network (typically boat WiFi) as Signal K. This should be an [ESP32 based](https://meshtastic.org/docs/hardware/devices/heltec-automation/lora32/?heltec=v3) device for WiFi connectivity.<br>
-  If using Serial connection, it can also be a nRF52 device
+* One [Meshtastic device](https://meshtastic.org/docs/hardware/devices/) running and connected to the same network (typically boat WiFi) as Signal K. This should be an [ESP32 based](https://meshtastic.org/docs/hardware/devices/heltec-automation/lora32/?heltec=v3) device for WiFi connectivity.
 * At least one additional Meshtastic device for the crew ashore. [Seeed T1000-e](https://meshtastic.org/docs/hardware/devices/seeed-studio/sensecap/card-tracker/) is a great option, but any battery-powered Meshtastic device will work. Having a device for each crew member is even better. In busy areas these should be set to [`CLIENT_MUTE` role](https://meshtastic.org/blog/choosing-the-right-device-role/)
 * Optionally, a Meshtastic GPS tracker device installed in the dinghy
 * Optionally, a [Meshtastic mast-top repeater](https://www.printables.com/model/1396221-meshtastic-boat-module-masthead) for greatly increased communications range
@@ -91,28 +91,4 @@ Metrics used:
 
 ## Changes
 
-* 1.2.4 (2026-02-15)
-  - Corrupted Node DB file should no longer crash the plugin
-* 1.2.3 (2025-10-15)
-  - Nodes that haven't been seen in last two days are no longer registered to Signal K data structure
-  - Added safeties for various non-numeric telemetry and coordinate values
-* 1.2.2 (2025-10-01)
-  - Set "last seen" timestamp of nodes based on packet payloads, not the time they're received
-  - Send timestamp with telemetry
-  - Fixed issue with persising node-to-vessel matches from `DE <callsign>`
-* 1.2.1 (2025-09-28)
-  - Fixed issue with Signal K servers that don't have navigation.position set
-* 1.2.0 (2025-09-28)
-  - Support for Node.js older than 22.x, for example as seen in Venus OS Large
-  - Safety for nodes in DB that don't have a "last seen" timestamp
-  - Made connection status notifications clearer
-* 1.1.2 (2025-09-25)
-  - Added support for the new roles from Meshtastic 2.7 (`ROUTER_LATE` and `CLIENT_BASE`)
-  - Fixed issue with sending a bell with alerts that have sound enabled
-* 1.1.1 (2025-09-18)
-  - Fixed empty response text message to digital switching actions
-  - Added support for the proposed Signal K MOB position specification
-* 1.1.0 (2025-09-11)
-  - Added support for Serial transport with the Meshtastic device
-* 1.0.0 (2025-09-11)
-  - Initial release with HTTP and TCP transports
+See [Changelog](CHANGELOG.md)
