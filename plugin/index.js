@@ -200,9 +200,7 @@ function nodeToSignalK(app, node, nodeInfo, settings) {
       {
         source: {
           label: 'signalk-meshtastic',
-          src: (settings
-            && settings.communications
-            && settings.communications.populate_delta_source) ? nodeInfo.num : undefined,
+          src: String(nodeInfo.num),
         },
         timestamp: new Date().toISOString(),
         values,
@@ -405,9 +403,7 @@ module.exports = (app) => {
           {
             source: {
               label: 'signalk-meshtastic',
-              src: (settings
-                && settings.communications
-                && settings.communications.populate_delta_source) ? selfId : undefined,
+              src: String(selfId),
             },
             timestamp: new Date().toISOString(),
             values: [
@@ -704,9 +700,7 @@ module.exports = (app) => {
                   {
                     source: {
                       label: 'signalk-meshtastic',
-                      src: (settings
-                        && settings.communications
-                        && settings.communications.populate_delta_source) ? packet.from : undefined,
+                      src: String(packet.from),
                     },
                     timestamp: new Date().toISOString(),
                     values,
@@ -744,9 +738,7 @@ module.exports = (app) => {
                   {
                     source: {
                       label: 'signalk-meshtastic',
-                      src: (settings
-                        && settings.communications
-                        && settings.communications.populate_delta_source) ? packet.from : undefined,
+                      src: String(packet.from),
                     },
                     timestamp: new Date().toISOString(),
                     values,
@@ -811,9 +803,7 @@ module.exports = (app) => {
                 {
                   source: {
                     label: 'signalk-meshtastic',
-                    src: (settings
-                      && settings.communications
-                      && settings.communications.populate_delta_source) ? position.from : undefined,
+                    src: String(position.from),
                   },
                   timestamp: new Date().toISOString(),
                   values,
@@ -1093,11 +1083,6 @@ module.exports = (app) => {
               type: 'boolean',
               title: 'Populate Signal K vessels for Meshtastic devices sharing location (for display in Freeboard etc)',
               default: false,
-            },
-            populate_delta_sources: {
-              type: 'boolean',
-              title: 'Populate the Meshtastic node that was the source of a particular delta into Signal K source. Can crash OpenCPN',
-              default: true,
             },
           },
         },
